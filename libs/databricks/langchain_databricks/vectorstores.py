@@ -216,6 +216,9 @@ class DatabricksVectorSearch(VectorStore):
         embedding: Optional[Embeddings] = None,
         text_column: Optional[str] = None,
         columns: Optional[List[str]] = None,
+        workspace_url: Optional[str] = None, 
+        service_principal_client_id: Optional[str] = None,
+        service_principal_client_secret: Optional[str] = None
     ):
         if not (isinstance(index_name, str) and _INDEX_NAME_PATTERN.match(index_name)):
             raise ValueError(
@@ -233,20 +236,41 @@ class DatabricksVectorSearch(VectorStore):
                 "Please install it with `pip install databricks-vectorsearch`."
             ) from e
 
-        try:
-            self.index = VectorSearchClient().get_index(
-                endpoint_name=endpoint, index_name=index_name
-            )
-        except Exception as e:
-            if endpoint is None and "Wrong vector search endpoint" in str(e):
-                raise ValueError(
-                    "The `endpoint` parameter is required for instantiating "
-                    "DatabricksVectorSearch with the `databricks-vectorsearch` "
-                    "version earlier than 0.35. Please provide the endpoint "
-                    "name or upgrade to version 0.35 or later."
-                ) from e
-            else:
-                raise
+        if workspace_url and service_principal_client_id and service_principal_client_secret: 
+            try: 
+                self.index = VectorSearchClient(
+                    workspace_url=workspace_url,
+                    service_principal_client_id=service_principal_client_id, 
+                    service_principal_client_secret=service_principal_client_secret 
+                ).get_index(
+                    endpoint_name=endpoint, index_name=index_name
+                )
+            except Exception as e: 
+                if endpoint is None and "Wrong vector search endpoint" in str(e): 
+                    raise ValueError(
+                        "The `endpoint` parameter is required for instantiating "
+                        "DatabricksVectorSearch with the `databricks-vectorsearch` "
+                        "version earlier than 0.35. Please provide the endpoint "
+                        "name or upgrade to version 0.35 or later."
+                    ) from e
+                else:
+                    raise
+        else: 
+            try:
+                self.index = VectorSearchClient().get_index(
+                    endpoint_name=endpoint, index_name=index_name
+                )
+                print(self.index)
+            except Exception as e:
+                if endpoint is None and "Wrong vector search endpoint" in str(e):
+                    raise ValueError(
+                        "The `endpoint` parameter is required for instantiating "
+                        "DatabricksVectorSearch with the `databricks-vectorsearch` "
+                        "version earlier than 0.35. Please provide the endpoint "
+                        "name or upgrade to version 0.35 or later."
+                    ) from e
+                else:
+                    raise
 
         self._index_details = IndexDetails(self.index)
 
